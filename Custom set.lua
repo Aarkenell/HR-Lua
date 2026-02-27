@@ -2446,13 +2446,13 @@ choices = {
 												max = 1,
 												targetEffect = grantHealthTarget(2, { SlotExpireEnum.startOfOwnerTurn }, nullEffect(), "shadow")
 											})
-						.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -1), incrementCounterEffect("p2_ritual", -1))
+						.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -1), incrementCounterEffect("p2_ritual", -1)))
 						,
 
 				
 				cost = expendCost,
-				--condition = getCounter("p1_ritual").gte(1),
-				condition = getCurrentPlayerRitual().gte(1),
+				condition = getCounter("p1_ritual").gte(1),
+				--condition = getCurrentPlayerRitual().gte(1),
 
 				layout = createLayout({
 					name = "Infernal Strength",
