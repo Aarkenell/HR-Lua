@@ -60,35 +60,11 @@ local slot = createSlot({
         expiresArray = { neverExpiry }
     })
 
-
-
-function playerTrackingBuffDef()
-local counter1 = incrementCounterEffect("p1_turn", 1).seq(resetCounterEffect("p2_turn"))
-local counter2 = incrementCounterEffect("p2_turn", 1).seq(resetCounterEffect("p1_turn"))
-  local set_counters_effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), counter1 , counter2)
-  return createGlobalBuff({
-    id = "player_turn_tracking_buff",
-    name = "Turn tracker",
-    abilities = {
-        createAbility({
-            id = "player_turn_track_ability",
-            trigger = startOfTurnTrigger,
-            effect = set_counters_effect
-        })
-    }
-  })
-end
-
-function getCurrentPlayerRitual()
-return  getCounter("p1_ritual").multiply(getCounter("p1_turn")).add(getCounter("p2_ritual").multiply(getCounter("p2_turn")))
-end
-
-
 function startOfGameBuffDef()
 
     return createGlobalBuff({
         id="startOfGameBuff",
-        name = "Remove a faction",
+        name = "Replace a faction",
         abilities = {
             createAbility({
                 id="SoG_effect",
@@ -117,17 +93,9 @@ function startOfGameBuffDef()
 						.seq(createCardEffect(acs_demonic_runes_carddef(), loc(nil, nullPloc)))
 						.seq(createCardEffect(acs_dark_mass_carddef(), loc(nil, nullPloc)))
 						.seq(moveTarget(tradeDeckLoc).apply(selectLoc(loc(nil, nullPloc))))
-				
+
+
 				.seq(shuffleTradeDeckEffect()).seq(shuffleTradeDeckEffect())
-				.seq(createCardEffect(acs_acolyte_carddef(), loc(nil, nullPloc)))
-				.seq(createCardEffect(acs_acolyte_carddef(), loc(nil, nullPloc)))
-				.seq(createCardEffect(acs_demonic_linguist_carddef(), loc(nil, nullPloc)))
-				.seq(createCardEffect(acs_demonic_linguist_carddef(), loc(nil, nullPloc)))
-				--[[.seq(createCardEffect(acs_occultist_carddef(), loc(nil, nullPloc)))
-						.seq(createCardEffect(acs_coven_priestess_carddef(), loc(nil, nullPloc)))
-						.seq(createCardEffect(acs_ceremonial_altar_carddef(), loc(nil, nullPloc)))
-						.seq(createCardEffect(acs_blood_ritual_carddef(), loc(nil, nullPloc)))]]
-				.seq(moveTarget(tradeDeckLoc).apply(selectLoc(loc(nil, nullPloc))))
 				.seq(refillMarketEffect(const(0)).seq(refillMarketEffect(const(1))).seq(refillMarketEffect(const(2))).seq(refillMarketEffect(const(3))).seq(refillMarketEffect(const(4))))
 				
 	--create buffs
@@ -139,1373 +107,6 @@ function startOfGameBuffDef()
 	})
 end
 
-
-
-function acs_ritual_summoning_p1_carddef()
-    local cardLayout = createLayout({
-        name = "Necros Rituals",
-        art = "icons/the_summoning",
-        frame = "frames/necros_action_cardframe",
-		xmlText=format([[
-<vlayout>
-<hlayout flexibleheight="4">
-            <tmpro text="{expend}" fontsize="40" flexiblewidth="2"/>
-            <tmpro text="Select a Ritual to perform.
-			
-			Current Ritual points: {0}" fontsize="24" flexiblewidth="12" />
-    </hlayout>
-</vlayout>]],
-		{ getCounter("p1_ritual")})
-    })
-
-local slot = createSlot({
-        id = "VeilOfVoid",
-        expiresArray = { neverExpiry }
-    })
-
-
- return createSkillDef({
-        id = "acs_ritual_summoning_p1",
-        name = "Necros Rituals",
-        types = { skillType },
-        layout = cardLayout,
-        layoutPath = "icons/the_summoning",
-        abilities = {
-            createAbility({
-                id = "acs_summon_demon_ab",
-                trigger = uiTrigger,
-                activations = multipleActivations,
-                layout = cardLayout,
-                promptType = showPrompt,
-effect = pushChoiceEffectWithTitle(
-
-{
-					upperTitle = "",
-					lowerTitle = "",
-choices = {
--- Choice 1: Lesser Rituals
-			{
-				effect = pushChoiceEffectWithTitle(
-
-{
-					upperTitle = "Cost is paid in Ritual points (not Gold).",
-					lowerTitle = "All demons summoned are tokens, and are sacrificed when they leave play.",
-choices = {
--- Choice 1a: Always available - 1 cost
-			{
-				effect = pushTargetedEffect({
-												desc = "Give a champion +2 <sprite name=\"shield\"> until your next turn.",
-												validTargets = selectLoc(currentInPlayLoc),
-												min = 0,
-												max = 1,
-												targetEffect = grantHealthTarget(2, { SlotExpireEnum.startOfOwnerTurn }, nullEffect(), "shadow")
-											})
-						.seq(incrementCounterEffect("p1_ritual", -1)),
-				cost = expendCost,
-				condition = getCounter("p1_ritual").gte(1),
-
-				layout = createLayout({
-					name = "Infernal Strength",
-					art = "art/epicart/dark_leader",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 1,
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Give a champion +2{shield} until your next turn." fontsize="26"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-
--- Choice 1b: Always available - 1 cost
-
-			{
-				effect = incrementCounterEffect("p1_ritual", -1)
-				.seq(createCardEffect(acs_demonic_leech_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(1),
-            layout = createLayout(
-                {
-                    name = "Summon Demonic Leech",
-                    art = "art/t_wurm",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 1,
-					xmlText = [[
-<vlayout>
-    <hlayout flexibleheight="0.5">
-        <box flexiblewidth="1">
-            <tmpro text="{expend}" fontsize="30"/>
-        </box>
-        <box flexiblewidth="7">
-            <tmpro text="Deal 1 damage to opponent.
-+1{shield} until this leaves play." fontsize="18"/>
-</box>
-</hlayout>
-<divider/>
-<hlayout flexibleheight="0.7">
-        <box flexiblewidth="7">
-            <tmpro text="Explode: If this has 5{shield} at the start of a turn, immediately deal 5 damage to opponent and sacrifice this card. " fontsize="20"/>
-</box>
-</hlayout>
-</vlayout>
-					]],
-					health = 0,
-                    isGuard = false
-                }
-            ),
-				
-				tags = {}
-			},			
--- Choice 1c: Always available - 2 cost									
-			{
-				effect = incrementCounterEffect("p1_ritual", -2)
-				.seq(createCardEffect(acs_void_guard_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(2),
-				layout = createLayout({
-                     name = "Summon Void Guard",
-                    art = "art/t_midnight_knight",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 2,
-                    xmlText=[[
-<vlayout>
-    <hlayout flexibleheight="3">
-            <tmpro text="{expend}" fontsize="50" flexiblewidth="2"/>
-            <tmpro text="{combat_1}" fontsize="50" flexiblewidth="12" />
-    </hlayout>
-    <divider/>
-    <hlayout flexibleheight="2">
-            <tmpro text="You can't a-void him." fontsize="20" fontstyle="italic" flexiblewidth="10" />
-    </hlayout> 
-</vlayout>
-					]],
-                    health = 2,
-                    isGuard = true
-									}),
-				
-				tags = {}
-			},	
-
--- Choice 1d- Always available - 2 cost
-													{
-				effect = gainMaxHealthEffect(currentPid, 1).seq(gainHealthEffect(4))
-							.seq(incrementCounterEffect("p1_ritual", -2)),
-				condition = getCounter("p1_ritual").gte(2),
-				layout = createLayout({
-					name = "Embrace Darkness",
-					art = "art/epicart/dark_offering",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 2,
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Increase your
-max Health by 1.
-
-&lt;size=150%&gt;{health_4}" fontsize="24"/>
-	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			}									
-}
-}
-),
-
-				layout = createLayout({
-					name = "Lesser Rituals",
-					art = "icons/the_summoning",
-					frame = "frames/necros_action_cardframe",
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Cost 1-2 Ritual points." fontsize="26"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-
--- Choice 2: Common Rituals
-			{
-				effect = pushChoiceEffectWithTitle(
-
-{
-					upperTitle = "Cost is paid in Ritual points (not Gold). You must have a Necros card in play to perform these Rituals.",
-					lowerTitle = "All demons summoned are tokens, and are sacrificed when they leave play.",
-choices = {
--- Choice 2a: Always available - 3 cost
-			{
-				effect = incrementCounterEffect("p1_ritual", -3)
-				.seq(createCardEffect(acs_shadow_feeder_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(3).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardChampion(necrosFaction)).count().gte(1)),
-            layout = createLayout(
-                {
-                    name = "Summon Shadow Feeder",
-                    art = "art/epicart/deathbringer",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 3,
-					xmlText = [[
-<vlayout>
-<hlayout flexibleheight="1">
-            <tmpro text="{expend}" fontsize="38" flexiblewidth="1"/>
-            <vlayout flexiblewidth="6">
-                                <tmpro text="{combat_2}
-&lt;size=70%&gt;+{combat_2}  if you have another Demon
-in play." fontsize="38" alignment="Center" flexibleheight="6.6"/>          
-            </vlayout>
-    </hlayout>
-</vlayout>
-					]],
-					health = 2,
-                    isGuard = false
-                }
-            ),
-				
-				tags = {}
-			},
-
--- Choice 2b: Require 1 of 2 - 3 Costs
---Should some require specific cards in play to Summon? E.g This needs Linguist/Acolyte
-			{
-				effect = incrementCounterEffect("p1_ritual", -3)
-				.seq(createCardEffect(acs_devourer_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(3).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_acolyte").Or(isCardName("acs_demonic_linguist"))).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Summon Devourer",
-					art = "art/epicart/thrasher_demon",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 3,
-					health = 3,
-                    isGuard = true,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires an Acolyte or Demonic Linguist in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-   <hlayout flexibleheight="3">
-            <tmpro text="{expend}" fontsize="30" flexiblewidth="2"/>
-            <tmpro text="{health_-1} {combat_1}
-&lt;size=70%&gt;Devourer gains +1{shield} until it leaves play." fontsize="32" flexiblewidth="10" />
-    </hlayout>
-</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-			
--- Choice 2c: Always available - 4 cost									
-			{
-			
-			
-				effect = pushTargetedEffect({
-												desc = "Give a champion +1 <sprite name=\"shield\"> until it leaves play. It cannot be attacked (and loses guard) until your next turn.",
-												validTargets = selectLoc(loc(currentPid, inPlayPloc)).where(isCardWithSlotString("VeilOfVoid").invert()),
-												min = 0,
-												max = 1,
-												targetEffect = grantHealthTarget(1, { SlotExpireEnum.LeavesPlay }, nullEffect(), "shadow")
-												.seq(addSlotToTarget(createNoAttackSlot({ startOfOwnerTurnExpiry, startOfTurnExpiry })))
-												.seq(addSlotToTarget(createGuardSwitchSlot(false, { startOfOwnerTurnExpiry })))
-												.seq(addSlotToTarget(slot))
-											})
-				.seq(incrementCounterEffect("p1_ritual", -4)),
-			condition = getCounter("p1_ritual").gte(4),
-				layout = createLayout({
-                     name = "Veil of the Void",
-                    art = "art/t_dark_energy",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 4,
-                    xmlText=[[
-<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Give a champion +1{shield} until it leaves play. It cannot be attacked (and loses guard) until your next turn. 
-&lt;size=75%&gt;
-(Each champion can only be the target of this Ritual once per game.)" fontsize="22"/>	</hlayout>	</vlayout>
-					]],
-									}),
-				
-				tags = {}
-			},	
-
--- Choice 2d- Require X- 4 cost
-													{
-				effect = pushTargetedEffect({
-												desc = "Expend a champion.",
-												validTargets = oppStunnableSelector(),
-												min = 0,
-												max = 1,
-												targetEffect = expendTarget()
-											})
-							.seq(hitSelfEffect(2))
-							.seq(incrementCounterEffect("p1_ritual", -4)),
-				condition = getCounter("p1_ritual").gte(4).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
-				layout = createLayout({
-					name = "Bend Will",
-					art = "art/epicart/scara_s_will",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 4,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-<hlayout flexiblewidth="1">
-<text text="-{health_2}
-&lt;size=80%&gt;Expend a champion." fontsize="32"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			}									
-}
-}
-),
-
-				layout = createLayout({
-					name = "Devout Rituals",
-					art = "icons/the_summoning",
-					frame = "frames/necros_action_cardframe",
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Cost 3-4 Ritual points." fontsize="26"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-			
--- Choice 3: Greater Rituals									
-			{
-				effect = pushChoiceEffectWithTitle(
-
-{
-					upperTitle = "Cost is paid in Ritual points (not Gold). You must have a Necros card in play to perform these Rituals.",
-					lowerTitle = "All demons summoned are tokens, and are sacrificed when they leave play.",
-choices = {
--- Choice 3a: Always available - 5 cost
-			{
-				effect = hitOpponentEffect(4).seq(gainMaxHealthEffect(oppPid, -2))
-							.seq(incrementCounterEffect("p1_ritual", -5)),
-				condition = getCounter("p1_ritual").gte(5).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
-				layout = createLayout({
-					name = "Soul Tap",
-					art = "art/t_life_drain",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 5,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-<hlayout flexiblewidth="1">
-<text text="Deal 4 damage 
-to your opponent.
-Reduce their
-max health by 2." fontsize="22"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-
--- Choice 3b: Require 1 of 2 - 5 Costs
---Should some require specific cards in play to Summon? E.g This needs Linguist/Acolyte
-			{
-				effect = incrementCounterEffect("p1_ritual", -5)
-				.seq(createCardEffect(acs_phase_demon_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(5).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_servant_of_the_shade")).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Summon Phase Demon",
-					art = "art/epicart/spawning_demon",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					health = 4,
-                    isGuard = true,
-					cost = 5,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires a
-Servant of the Shade in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-   <hlayout flexibleheight="3">
-            <tmpro text="When stunned, put a
-Phased Demon in play.
-(It has 2{shield} and {combat_1}.)" fontsize="24" flexiblewidth="10" />
-    </hlayout> 
-</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-			
--- Choice 3c: Always available - 4 cost									
-			{
-				effect = drawCardsEffect(1)
-				.seq(incrementCounterEffect("p1_ritual", -6)),
-			condition = getCounter("p1_ritual").gte(6),
-				layout = createLayout({
-                     name = "Invoke",
-                    art = "art/epicart/time_walker",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 6,
-                    xmlText=[[
-<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires a {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-<hlayout flexiblewidth="1">
-<text text="Draw 1" fontsize="32"/>	</hlayout>	</vlayout>
-					]],
-									}),
-				
-				tags = {}
-			},	
-
--- Choice 3d- Require X- 4 cost
-													{
-				effect = incrementCounterEffect("p1_ritual", -6)
-				.seq(createCardEffect(acs_strange_thing_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(6).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_occultist")).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Summon a Strange Thing",
-					art = "art/epicart/elder_greatwurm", --reaper, spore_beast
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					health = 4,
-                    isGuard = false,
-					cost = 6,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Requires an Occultist in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
- <hlayout flexibleheight="1">
-        <box flexiblewidth="1">
-            <tmpro text="{expend}" fontsize="30"/>
-        </box>
-        <box flexiblewidth="6">
-            <icon text="{combat_2}" fontsize="30"/>
-</box>
-</hlayout>
-    <divider/>
-<hlayout flexibleheight="2">
-        <box flexiblewidth="7">
-            <tmpro text="If you stun 2+ champions this turn, transform into a Stranger Thing." fontsize="20"/>
-        </box>
-    </hlayout> 
-</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			}									
-}
-}
-),
-
-				layout = createLayout({
-					name = "Greater Rituals",
-					art = "icons/the_summoning",
-					frame = "frames/necros_action_cardframe",
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Cost 5-6 Ritual points." fontsize="26"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},	
-
--- Choice 4- Infernal Rituals
-			{
-				effect = pushChoiceEffectWithTitle(
-
-{
-					upperTitle = "Cost is paid in Ritual points (not Gold). You must have a Necros card in play to perform these Rituals.",
-					lowerTitle = "All demons summoned are tokens, and are sacrificed when they leave play.",
-choices = {
--- Choice 4a: Always available - 7 cost
-{
-				effect = incrementCounterEffect("p1_ritual", -7)
-				.seq(createCardEffect(acs_incubus_carddef(), currentInPlayLoc))
-				.seq(incrementCounterEffect("incubus", 3)),
-				condition = getCounter("p1_ritual").gte(7).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_coven_priestess")).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Summon Incubus",
-					art = "art/epicart/guilt_demon",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					health = 4,
-                    isGuard = false,
-					cost = 7,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="0.5">
-            <tmpro text="{expend}" fontsize="40" flexiblewidth="2"/>
-            <icon text="{combat_3}" fontsize="40" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
-    <hlayout flexibleheight="3">
-            <tmpro text="Gains {combat_1} (permanently)
-at the start of each turn." fontsize="24" flexiblewidth="10" />
-    </hlayout>
-</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-
--- Choice 4b: 7 Cost
---Should some require specific cards in play to Summon? E.g This needs Linguist/Acolyte
-			{
-				effect = hitOpponentEffect(selectLoc(loc(currentPid, handPloc)).sum(getCardCost()))
-				.seq(hitSelfEffect(divide(selectLoc(loc(currentPid, handPloc)).sum(getCardCost()), 2)))
-				.seq(addEffect(endTurnEffect())),
-
-				condition = getCounter("p1_ritual").gte(7).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Crazed Chaos",
-					art = "art/epicart/divine_judgment",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 7,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="9">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires a {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-<hlayout flexiblewidth="1">
-<text text="Add the cost of
-all cards in your hand.
-Hit your opponent for damage equal to that amount.
-Hit yourself for half that amount (rounded down).
-End your turn immediately." fontsize="18"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-			
--- Choice 4c: Always available - 8 cost									
-			{
-				effect = incrementCounterEffect("p1_ritual", -8)
-				.seq(createCardEffect(acs_laughing_shade_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(8).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
-				
-			condition = getCounter("p1_ritual").gte(6),
-				layout = createLayout({
-                     name = "Summon Laughing Shade",
-                    art = "art/epicart/dark_prince",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 8,
-					health = 5,
-					isGuard = false,
-                    xmlText=[[
-<vlayout>
-    <hlayout flexibleheight="0.5">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Requires {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
- <hlayout flexibleheight="1">
-        <box flexiblewidth="1">
-            <tmpro text="{expend}" fontsize="30"/>
-        </box>
-        <box flexiblewidth="6">
-            <icon text="{combat_4}" fontsize="30"/>
-</box>
-</hlayout>
-    <divider/>
-<hlayout flexibleheight="1">
-        <box flexiblewidth="7">
-            <tmpro text="Sacrifice a card in the market.
-If it is an Action, +{combat_1} this turn.
-If it is a Champion, +{health_3}." fontsize="16"/>
-        </box>
-    </hlayout> 
-</vlayout>
-					]],
-									}),
-				
-				tags = {}
-			},	
-
--- Choice 4d- Require X- 8 cost
-													{
-				effect = incrementCounterEffect("p1_ritual", -8)
-				.seq(createCardEffect(acs_karamight_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(8).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_knight_of_karamight")).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Summon Karamight",
-					art = "art/epicart/raxxa_s_enforcer",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					health = 5,
-                    isGuard = true,
-					cost = 8,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="0.8">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Requires Knight
- of Karamight in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
- <hlayout flexibleheight="1">
-        <box flexiblewidth="1">
-            <tmpro text="{expend}" fontsize="30"/>
-        </box>
-        <box flexiblewidth="6">
-            <icon text="{combat_6}" fontsize="30"/>
-</box>
-</hlayout>
-    <divider/>
-<hlayout flexibleheight="1.5">
-        <box flexiblewidth="7">
-            <tmpro text="You may stun a demon token you own to gain +2{guard} until next turn." fontsize="20"/>
-        </box>
-    </hlayout> 
-</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			}									
-}
-}
-),
-
-				layout = createLayout({
-					name = "Infernal Rituals",
-					art = "icons/the_summoning",
-					frame = "frames/necros_action_cardframe",
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Cost 7-8 Ritual points." fontsize="26"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},										
-}
-}
-),
-				--condition = selectLoc(loc(currentPid, inPlayPloc)).where(isCardChampion(necrosFaction)).count().gte(1),
-				cost = expendCost,
-			}),
-        },
-		layout = createLayout(
-                {
-                    name = "Ritual Summoning",
-                    art = "icons/the_summoning",
-                    frame = "frames/necros_action_cardframe",
-                    xmlText=format([[
-<vlayout>
-<hlayout flexibleheight="4">
-            <tmpro text="{expend}" fontsize="40" flexiblewidth="2"/>
-            <tmpro text="Select a Ritual to perform.
-			
-			Current Ritual points: {0}" fontsize="24" flexiblewidth="12" />
-    </hlayout>
-</vlayout>]],
-		{ getCounter("p1_ritual")})
-                }
-            )
-        
-    })
-end
-
-function acs_ritual_summoning_p2_carddef()
-    local cardLayout = createLayout({
-        name = "Necros Rituals",
-        art = "icons/the_summoning",
-        frame = "frames/necros_action_cardframe",
-		xmlText=format([[
-<vlayout>
-<hlayout flexibleheight="4">
-            <tmpro text="{expend}" fontsize="40" flexiblewidth="2"/>
-            <tmpro text="Select a Ritual to perform.
-			
-			Current Ritual points: {0}" fontsize="24" flexiblewidth="12" />
-    </hlayout>
-</vlayout>]],
-		{ getCounter("p2_ritual")})
-    })
-
-local slot = createSlot({
-        id = "VeilOfVoid",
-        expiresArray = { neverExpiry }
-    })
-
-
- return createSkillDef({
-        id = "acs_ritual_summoning_p2",
-        name = "Necros Rituals",
-        types = { skillType },
-        layout = cardLayout,
-        layoutPath = "icons/the_summoning",
-        abilities = {
-            createAbility({
-                id = "acs_summon_demon_ab",
-                trigger = uiTrigger,
-                activations = multipleActivations,
-                layout = cardLayout,
-                promptType = showPrompt,
-effect = pushChoiceEffectWithTitle(
-
-{
-					upperTitle = "",
-					lowerTitle = "",
-choices = {
--- Choice 1: Lesser Rituals
-			{
-				effect = pushChoiceEffectWithTitle(
-
-{
-					upperTitle = "Cost is paid in Ritual points (not Gold).",
-					lowerTitle = "All demons summoned are tokens, and are sacrificed when they leave play.",
-choices = {
--- Choice 1a: Always available - 1 cost
-			{
-				effect = pushTargetedEffect({
-												desc = "Give a champion +2 <sprite name=\"shield\"> until your next turn.",
-												validTargets = selectLoc(currentInPlayLoc),
-												min = 0,
-												max = 1,
-												targetEffect = grantHealthTarget(2, { SlotExpireEnum.startOfOwnerTurn }, nullEffect(), "shadow")
-											})
-						.seq(incrementCounterEffect("p2_ritual", -1)),
-				cost = expendCost,
-				condition = getCounter("p2_ritual").gte(1),
-
-				layout = createLayout({
-					name = "Infernal Strength",
-					art = "art/epicart/dark_leader",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 1,
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Give a champion +2{shield} until your next turn." fontsize="26"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-
--- Choice 1b: Always available - 1 cost
-
-			{
-				effect = incrementCounterEffect("p2_ritual", -1)
-				.seq(createCardEffect(acs_demonic_leech_carddef(), currentInPlayLoc)),
-				condition = getCounter("p2_ritual").gte(1),
-            layout = createLayout(
-                {
-                    name = "Summon Demonic Leech",
-                    art = "art/t_wurm",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 1,
-					xmlText = [[
-<vlayout>
-    <hlayout flexibleheight="0.5">
-        <box flexiblewidth="1">
-            <tmpro text="{expend}" fontsize="30"/>
-        </box>
-        <box flexiblewidth="7">
-            <tmpro text="Deal 1 damage to opponent.
-+1{shield} until this leaves play." fontsize="18"/>
-</box>
-</hlayout>
-<divider/>
-<hlayout flexibleheight="0.7">
-        <box flexiblewidth="7">
-            <tmpro text="Explode: If this has 5{shield} at the start of a turn, immediately deal 5 damage to opponent and sacrifice this card. " fontsize="20"/>
-</box>
-</hlayout>
-</vlayout>
-					]],
-					health = 0,
-                    isGuard = false
-                }
-            ),
-				
-				tags = {}
-			},			
--- Choice 1c: Always available - 2 cost									
-			{
-				effect = incrementCounterEffect("p2_ritual", -2)
-				.seq(createCardEffect(acs_void_guard_carddef(), currentInPlayLoc)),
-				condition = getCounter("p2_ritual").gte(2),
-				layout = createLayout({
-                     name = "Summon Void Guard",
-                    art = "art/t_midnight_knight",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 2,
-                    xmlText=[[
-<vlayout>
-    <hlayout flexibleheight="3">
-            <tmpro text="{expend}" fontsize="50" flexiblewidth="2"/>
-            <tmpro text="{combat_1}" fontsize="50" flexiblewidth="12" />
-    </hlayout>
-    <divider/>
-    <hlayout flexibleheight="2">
-            <tmpro text="You can't a-void him." fontsize="20" fontstyle="italic" flexiblewidth="10" />
-    </hlayout> 
-</vlayout>
-					]],
-                    health = 2,
-                    isGuard = true
-									}),
-				
-				tags = {}
-			},	
-
--- Choice 1d- Always available - 2 cost
-													{
-				effect = gainMaxHealthEffect(currentPid, 1).seq(gainHealthEffect(4))
-							.seq(incrementCounterEffect("p2_ritual", -2)),
-				condition = getCounter("p2_ritual").gte(2),
-				layout = createLayout({
-					name = "Embrace Darkness",
-					art = "art/epicart/dark_offering",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 2,
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Increase your
-max Health by 1.
-
-&lt;size=150%&gt;{health_4}" fontsize="24"/>
-	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			}									
-}
-}
-),
-
-				layout = createLayout({
-					name = "Lesser Rituals",
-					art = "icons/the_summoning",
-					frame = "frames/necros_action_cardframe",
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Cost 1-2 Ritual points." fontsize="26"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-
--- Choice 2: Common Rituals
-			{
-				effect = pushChoiceEffectWithTitle(
-
-{
-					upperTitle = "Cost is paid in Ritual points (not Gold). You must have a Necros card in play to perform these Rituals.",
-					lowerTitle = "All demons summoned are tokens, and are sacrificed when they leave play.",
-choices = {
--- Choice 2a: Always available - 3 cost
-			{
-				effect = incrementCounterEffect("p2_ritual", -3)
-				.seq(createCardEffect(acs_shadow_feeder_carddef(), currentInPlayLoc)),
-				condition = getCounter("p2_ritual").gte(3).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardChampion(necrosFaction)).count().gte(1)),
-            layout = createLayout(
-                {
-                    name = "Summon Shadow Feeder",
-                    art = "art/epicart/deathbringer",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 3,
-					xmlText = [[
-<vlayout>
-<hlayout flexibleheight="1">
-            <tmpro text="{expend}" fontsize="38" flexiblewidth="1"/>
-            <vlayout flexiblewidth="6">
-                                <tmpro text="{combat_2}
-&lt;size=70%&gt;+{combat_2}  if you have another Demon
-in play." fontsize="38" alignment="Center" flexibleheight="6.6"/>          
-            </vlayout>
-    </hlayout>
-</vlayout>
-					]],
-					health = 2,
-                    isGuard = false
-                }
-            ),
-				
-				tags = {}
-			},
-
--- Choice 2b: Require 1 of 2 - 3 Costs
---Should some require specific cards in play to Summon? E.g This needs Linguist/Acolyte
-			{
-				effect = incrementCounterEffect("p2_ritual", -3)
-				.seq(createCardEffect(acs_devourer_carddef(), currentInPlayLoc)),
-				condition = getCounter("p2_ritual").gte(3).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_acolyte").Or(isCardName("acs_demonic_linguist"))).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Summon Devourer",
-					art = "art/epicart/thrasher_demon",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 3,
-					health = 3,
-                    isGuard = true,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires an Acolyte or Demonic Linguist in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-   <hlayout flexibleheight="3">
-            <tmpro text="{expend}" fontsize="30" flexiblewidth="2"/>
-            <tmpro text="{health_-1} {combat_1}
-&lt;size=70%&gt;Devourer gains +1{shield} until it leaves play." fontsize="32" flexiblewidth="10" />
-    </hlayout>
-</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-			
--- Choice 2c: Always available - 4 cost									
-			{
-			
-			
-				effect = pushTargetedEffect({
-												desc = "Give a champion +1 <sprite name=\"shield\"> until it leaves play. It cannot be attacked (and loses guard) until your next turn.",
-												validTargets = selectLoc(loc(currentPid, inPlayPloc)).where(isCardWithSlotString("VeilOfVoid").invert()),
-												min = 0,
-												max = 1,
-												targetEffect = grantHealthTarget(1, { SlotExpireEnum.LeavesPlay }, nullEffect(), "shadow")
-												.seq(addSlotToTarget(createNoAttackSlot({ startOfOwnerTurnExpiry, startOfTurnExpiry })))
-												.seq(addSlotToTarget(createGuardSwitchSlot(false, { startOfOwnerTurnExpiry })))
-												.seq(addSlotToTarget(slot))
-											})
-				.seq(incrementCounterEffect("p2_ritual", -4)),
-			condition = getCounter("p2_ritual").gte(4),
-				layout = createLayout({
-                     name = "Veil of the Void",
-                    art = "art/t_dark_energy",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 4,
-                    xmlText=[[
-<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Give a champion +1{shield} until it leaves play. It cannot be attacked (and loses guard) until your next turn. 
-&lt;size=75%&gt;
-(Each champion can only be the target of this Ritual once per game.)" fontsize="22"/>	</hlayout>	</vlayout>
-					]],
-									}),
-				
-				tags = {}
-			},	
-
--- Choice 2d- Require X- 4 cost
-													{
-				effect = pushTargetedEffect({
-												desc = "Expend a champion.",
-												validTargets = oppStunnableSelector(),
-												min = 0,
-												max = 1,
-												targetEffect = expendTarget()
-											})
-							.seq(hitSelfEffect(2))
-							.seq(incrementCounterEffect("p2_ritual", -4)),
-				condition = getCounter("p2_ritual").gte(4).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
-				layout = createLayout({
-					name = "Bend Will",
-					art = "art/epicart/scara_s_will",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 4,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-<hlayout flexiblewidth="1">
-<text text="-{health_2}
-&lt;size=80%&gt;Expend a champion." fontsize="32"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			}									
-}
-}
-),
-
-				layout = createLayout({
-					name = "Devout Rituals",
-					art = "icons/the_summoning",
-					frame = "frames/necros_action_cardframe",
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Cost 3-4 Ritual points." fontsize="26"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-			
--- Choice 3: Greater Rituals									
-			{
-				effect = pushChoiceEffectWithTitle(
-
-{
-					upperTitle = "Cost is paid in Ritual points (not Gold). You must have a Necros card in play to perform these Rituals.",
-					lowerTitle = "All demons summoned are tokens, and are sacrificed when they leave play.",
-choices = {
--- Choice 3a: Always available - 5 cost
-			{
-				effect = hitOpponentEffect(4).seq(gainMaxHealthEffect(oppPid, -2))
-							.seq(incrementCounterEffect("p2_ritual", -5)),
-				condition = getCounter("p2_ritual").gte(5).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
-				layout = createLayout({
-					name = "Soul Tap",
-					art = "art/t_life_drain",
-					frame = "frames/necros_action_cardframe",
-					cost = 5,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-<hlayout flexiblewidth="1">
-<text text="Deal 4 damage 
-to your opponent.
-Reduce their
-max health by 2." fontsize="22"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-
--- Choice 3b: Require 1 of 2 - 5 Costs
---Should some require specific cards in play to Summon? E.g This needs Linguist/Acolyte
-			{
-				effect = incrementCounterEffect("p2_ritual", -5)
-				.seq(createCardEffect(acs_phase_demon_carddef(), currentInPlayLoc)),
-				condition = getCounter("p2_ritual").gte(5).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_servant_of_the_shade")).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Summon Phase Demon",
-					art = "art/epicart/spawning_demon",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					health = 4,
-                    isGuard = true,
-					cost = 5,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires a
-Servant of the Shade in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-   <hlayout flexibleheight="3">
-            <tmpro text="When stunned, put a
-Phased Demon in play.
-(It has 2{shield} and {combat_1}.)" fontsize="24" flexiblewidth="10" />
-    </hlayout> 
-</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-			
--- Choice 3c: Always available - 4 cost									
-			{
-				effect = drawCardsEffect(1)
-				.seq(incrementCounterEffect("p2_ritual", -6)),
-			condition = getCounter("p2_ritual").gte(6),
-				layout = createLayout({
-                     name = "Invoke",
-                    art = "art/epicart/time_walker",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 6,
-                    xmlText=[[
-<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires a {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-<hlayout flexiblewidth="1">
-<text text="Draw 1" fontsize="32"/>	</hlayout>	</vlayout>
-					]],
-									}),
-				
-				tags = {}
-			},	
-
--- Choice 3d- Require X- 4 cost
-													{
-				effect = incrementCounterEffect("p2_ritual", -6)
-				.seq(createCardEffect(acs_strange_thing_carddef(), currentInPlayLoc)),
-				condition = getCounter("p2_ritual").gte(6).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_occultist")).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Summon a Strange Thing",
-					art = "art/epicart/elder_greatwurm", --reaper, spore_beast
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					health = 4,
-                    isGuard = false,
-					cost = 6,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Requires an Occultist in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
- <hlayout flexibleheight="1">
-        <box flexiblewidth="1">
-            <tmpro text="{expend}" fontsize="30"/>
-        </box>
-        <box flexiblewidth="6">
-            <icon text="{combat_2}" fontsize="30"/>
-</box>
-</hlayout>
-    <divider/>
-<hlayout flexibleheight="2">
-        <box flexiblewidth="7">
-            <tmpro text="If you stun 2+ champions this turn, transform into a Stranger Thing." fontsize="20"/>
-        </box>
-    </hlayout> 
-</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			}									
-}
-}
-),
-
-				layout = createLayout({
-					name = "Greater Rituals",
-					art = "icons/the_summoning",
-					frame = "frames/necros_action_cardframe",
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Cost 5-6 Ritual points." fontsize="26"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},	
-
--- Choice 4- Infernal Rituals
-			{
-				effect = pushChoiceEffectWithTitle(
-
-{
-					upperTitle = "Cost is paid in Ritual points (not Gold). You must have a Necros card in play to perform these Rituals.",
-					lowerTitle = "All demons summoned are tokens, and are sacrificed when they leave play.",
-choices = {
--- Choice 4a: Always available - 7 cost
-{
-				effect = incrementCounterEffect("p2_ritual", -7)
-				.seq(createCardEffect(acs_incubus_carddef(), currentInPlayLoc))
-				.seq(incrementCounterEffect("incubus", 3)),
-				condition = getCounter("p2_ritual").gte(7).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_coven_priestess")).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Summon Incubus",
-					art = "art/epicart/guilt_demon",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					health = 4,
-                    isGuard = false,
-					cost = 7,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="0.5">
-            <tmpro text="{expend}" fontsize="40" flexiblewidth="2"/>
-            <icon text="{combat_3}" fontsize="40" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
-    <hlayout flexibleheight="3">
-            <tmpro text="Gains {combat_1} (permanently)
-at the start of each turn." fontsize="24" flexiblewidth="10" />
-    </hlayout>
-</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-
--- Choice 4b: 7 Cost
---Should some require specific cards in play to Summon? E.g This needs Linguist/Acolyte
-			{
-				effect = hitOpponentEffect(selectLoc(loc(currentPid, handPloc)).sum(getCardCost()))
-				.seq(hitSelfEffect(divide(selectLoc(loc(currentPid, handPloc)).sum(getCardCost()), 2)))
-				.seq(addEffect(endTurnEffect())),
-
-				condition = getCounter("p2_ritual").gte(7).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Crazed Chaos",
-					art = "art/epicart/divine_judgment",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 7,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="9">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires a {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
-<hlayout flexiblewidth="1">
-<text text="Add the cost of
-all cards in your hand.
-Hit your opponent for damage equal to that amount.
-Hit yourself for half that amount (rounded down).
-End your turn immediately." fontsize="18"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},
-			
--- Choice 4c: Always available - 8 cost									
-			{
-				effect = incrementCounterEffect("p2_ritual", -8)
-				.seq(createCardEffect(acs_laughing_shade_carddef(), currentInPlayLoc)),
-				condition = getCounter("p2_ritual").gte(8).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
-				
-			condition = getCounter("p2_ritual").gte(6),
-				layout = createLayout({
-                     name = "Summon Laughing Shade",
-                    art = "art/epicart/dark_prince",
-                    frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					cost = 8,
-					health = 5,
-					isGuard = false,
-                    xmlText=[[
-<vlayout>
-    <hlayout flexibleheight="0.5">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Requires {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
- <hlayout flexibleheight="1">
-        <box flexiblewidth="1">
-            <tmpro text="{expend}" fontsize="30"/>
-        </box>
-        <box flexiblewidth="6">
-            <icon text="{combat_4}" fontsize="30"/>
-</box>
-</hlayout>
-    <divider/>
-<hlayout flexibleheight="1">
-        <box flexiblewidth="7">
-            <tmpro text="Sacrifice a card in the market.
-If it is an Action, +{combat_1} this turn.
-If it is a Champion, +{health_3}." fontsize="16"/>
-        </box>
-    </hlayout> 
-</vlayout>
-					]],
-									}),
-				
-				tags = {}
-			},	
-
--- Choice 4d- Require X- 8 cost
-													{
-				effect = incrementCounterEffect("p2_ritual", -8)
-				.seq(createCardEffect(acs_karamight_carddef(), currentInPlayLoc)),
-				condition = getCounter("p2_ritual").gte(8).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_knight_of_karamight")).count().gte(1)),
-				
-				layout = createLayout({
-					name = "Summon Karamight",
-					art = "art/epicart/raxxa_s_enforcer",
-					frame = "frames/necromancer_frames/necromancer_item_cardframe",
-					health = 5,
-                    isGuard = true,
-					cost = 8,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="0.8">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Requires Knight
- of Karamight in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
- <hlayout flexibleheight="1">
-        <box flexiblewidth="1">
-            <tmpro text="{expend}" fontsize="30"/>
-        </box>
-        <box flexiblewidth="6">
-            <icon text="{combat_6}" fontsize="30"/>
-</box>
-</hlayout>
-    <divider/>
-<hlayout flexibleheight="1.5">
-        <box flexiblewidth="7">
-            <tmpro text="You may stun a demon token you own to gain +2{guard} until next turn." fontsize="20"/>
-        </box>
-    </hlayout> 
-</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			}									
-}
-}
-),
-
-				layout = createLayout({
-					name = "Infernal Rituals",
-					art = "icons/the_summoning",
-					frame = "frames/necros_action_cardframe",
-					xmlText=[[<vlayout>
-<hlayout flexiblewidth="1">
-<text text="Cost 7-8 Ritual points." fontsize="26"/>	</hlayout>	</vlayout>
-					]]
-									}),
-				
-				tags = {}
-			},										
-}
-}
-),
-				--condition = selectLoc(loc(currentPid, inPlayPloc)).where(isCardChampion(necrosFaction)).count().gte(1),
-				cost = expendCost,
-			}),
-        },
-		layout = createLayout(
-                {
-                    name = "Ritual Summoning",
-                    art = "icons/the_summoning",
-                    frame = "frames/necros_action_cardframe",
-                    xmlText=format([[
-<vlayout>
-<hlayout flexibleheight="4">
-            <tmpro text="{expend}" fontsize="40" flexiblewidth="2"/>
-            <tmpro text="Select a Ritual to perform.
-			
-			Current Ritual points: {0}" fontsize="24" flexiblewidth="12" />
-    </hlayout>
-</vlayout>]],
-		{ getCounter("p2_ritual")})
-                }
-            )
-        
-    })
-end
 
 --Summoned tokens
 
@@ -2423,14 +1024,6 @@ end
 
 
 --Perform Rituals
-local p1_X = incrementCounterEffect("p1_ritual", -1)
-check = getCounter("p1_ritual").gte(1)
-
-
-local p2_X = incrementCounterEffect("p2_ritual", -1)
-check = getCounter("p2_ritual").gte(1)
-
-
 local lesser_rituals = pushChoiceEffectWithTitle(
 
 {
@@ -2449,10 +1042,12 @@ choices = {
 						.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -1), incrementCounterEffect("p2_ritual", -1)))
 						,
 
-				
-				cost = expendCost,
-				condition = getCounter("p1_ritual").gte(1),
-				--condition = getCurrentPlayerRitual().gte(1),
+				cost = 1,
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(1),
 
 				layout = createLayout({
 					name = "Infernal Strength",
@@ -2471,10 +1066,14 @@ choices = {
 -- Choice 1b: Always available - 1 cost
 
 			{
-				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), p1_X, p2_X)
+				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -1), incrementCounterEffect("p2_ritual", -1))
 				.seq(createCardEffect(acs_demonic_leech_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(1),
-            layout = createLayout(
+            condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(1),
+			layout = createLayout(
                 {
                     name = "Summon Demonic Leech",
                     art = "art/t_wurm",
@@ -2510,9 +1109,13 @@ choices = {
 			{
 				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -2), incrementCounterEffect("p2_ritual", -2))
 				.seq(createCardEffect(acs_void_guard_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(2),
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(2),
 				layout = createLayout({
-                     name = "Summon Void Guard",
+                    name = "Summon Void Guard",
                     art = "art/t_midnight_knight",
                     frame = "frames/necromancer_frames/necromancer_item_cardframe",
 					cost = 2,
@@ -2539,12 +1142,17 @@ choices = {
 													{
 				effect = gainMaxHealthEffect(currentPid, 1).seq(gainHealthEffect(4))
 							.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -2), incrementCounterEffect("p2_ritual", -2))),
-				condition = getCounter("p1_ritual").gte(2),
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(2),
 				layout = createLayout({
 					name = "Embrace Darkness",
 					art = "art/epicart/dark_offering",
 					frame = "frames/necromancer_frames/necromancer_item_cardframe",
 					cost = 2,
+					
 					xmlText=[[<vlayout>
 <hlayout flexiblewidth="1">
 <text text="Increase your
@@ -2571,13 +1179,18 @@ choices = {
 			{
 				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -3), incrementCounterEffect("p2_ritual", -3))
 				.seq(createCardEffect(acs_shadow_feeder_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(3).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardChampion(necrosFaction)).count().gte(1)),
-            layout = createLayout(
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(3),
+				layout = createLayout(
                 {
                     name = "Summon Shadow Feeder",
                     art = "art/epicart/deathbringer",
                     frame = "frames/necromancer_frames/necromancer_item_cardframe",
 					cost = 3,
+					
 					xmlText = [[
 <vlayout>
 <hlayout flexibleheight="1">
@@ -2603,21 +1216,20 @@ in play." fontsize="38" alignment="Center" flexibleheight="6.6"/>
 			{
 				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -3), incrementCounterEffect("p2_ritual", -3))
 				.seq(createCardEffect(acs_devourer_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(3).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_acolyte").Or(isCardName("acs_demonic_linguist"))).count().gte(1)),
-				
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(3),
 				layout = createLayout({
 					name = "Summon Devourer",
 					art = "art/epicart/thrasher_demon",
 					frame = "frames/necromancer_frames/necromancer_item_cardframe",
 					cost = 3,
+					
 					health = 3,
                     isGuard = true,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires an Acolyte or Demonic Linguist in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
+					xmlText=[[<vlayout> 
    <hlayout flexibleheight="3">
             <tmpro text="{expend}" fontsize="30" flexiblewidth="2"/>
             <tmpro text="{health_-1} {combat_1}
@@ -2645,12 +1257,17 @@ in play." fontsize="38" alignment="Center" flexibleheight="6.6"/>
 												.seq(addSlotToTarget(slot))
 											})
 				.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -4), incrementCounterEffect("p2_ritual", -4))),
-			condition = getCounter("p1_ritual").gte(4),
+condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(4),
 				layout = createLayout({
                      name = "Veil of the Void",
                     art = "art/t_dark_energy",
                     frame = "frames/necromancer_frames/necromancer_item_cardframe",
 					cost = 4,
+					
                     xmlText=[[
 <vlayout>
 <hlayout flexiblewidth="1">
@@ -2674,18 +1291,18 @@ in play." fontsize="38" alignment="Center" flexibleheight="6.6"/>
 											})
 							.seq(hitSelfEffect(2))
 							.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -4), incrementCounterEffect("p2_ritual", -4))),
-				condition = getCounter("p1_ritual").gte(4).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(4),
 				layout = createLayout({
 					name = "Bend Will",
 					art = "art/epicart/scara_s_will",
 					frame = "frames/necromancer_frames/necromancer_item_cardframe",
 					cost = 4,
+					
 					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
 <hlayout flexiblewidth="1">
 <text text="-{health_2}
 &lt;size=80%&gt;Expend a champion." fontsize="32"/>	</hlayout>	</vlayout>
@@ -2708,18 +1325,18 @@ choices = {
 			{
 				effect = hitOpponentEffect(4).seq(gainMaxHealthEffect(oppPid, -2))
 							.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -5), incrementCounterEffect("p2_ritual", -5))),
-				condition = getCounter("p1_ritual").gte(5).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(5),
 				layout = createLayout({
 					name = "Soul Tap",
 					art = "art/t_life_drain",
 					frame = "frames/necromancer_frames/necromancer_item_cardframe",
 					cost = 5,
-					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
+					
+					xmlText=[[<vlayout> 
 <hlayout flexiblewidth="1">
 <text text="Deal 4 damage 
 to your opponent.
@@ -2732,12 +1349,14 @@ max health by 2." fontsize="22"/>	</hlayout>	</vlayout>
 			},
 
 -- Choice 3b: Require 1 of 2 - 5 Costs
---Should some require specific cards in play to Summon? E.g This needs Linguist/Acolyte
 			{
 				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -5), incrementCounterEffect("p2_ritual", -5))
 				.seq(createCardEffect(acs_phase_demon_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(5).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_servant_of_the_shade")).count().gte(1)),
-				
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(5),
 				layout = createLayout({
 					name = "Summon Phase Demon",
 					art = "art/epicart/spawning_demon",
@@ -2745,13 +1364,8 @@ max health by 2." fontsize="22"/>	</hlayout>	</vlayout>
 					health = 4,
                     isGuard = true,
 					cost = 5,
+					
 					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires a
-Servant of the Shade in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
    <hlayout flexibleheight="3">
             <tmpro text="When stunned, put a
 Phased Demon in play.
@@ -2768,19 +1382,19 @@ Phased Demon in play.
 			{
 				effect = drawCardsEffect(1)
 				.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -6), incrementCounterEffect("p2_ritual", -6))),
-			condition = getCounter("p1_ritual").gte(6),
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(6),
 				layout = createLayout({
                      name = "Invoke",
                     art = "art/epicart/time_walker",
                     frame = "frames/necromancer_frames/necromancer_item_cardframe",
 					cost = 6,
+					
                     xmlText=[[
 <vlayout>
-    <hlayout flexibleheight="1.2">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires a {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
 <hlayout flexiblewidth="1">
 <text text="Draw 1" fontsize="32"/>	</hlayout>	</vlayout>
 					]],
@@ -2793,8 +1407,11 @@ Phased Demon in play.
 													{
 				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -6), incrementCounterEffect("p2_ritual", -6))
 				.seq(createCardEffect(acs_strange_thing_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(6).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_occultist")).count().gte(1)),
-				
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(6),
 				layout = createLayout({
 					name = "Summon a Strange Thing",
 					art = "art/epicart/elder_greatwurm", --reaper, spore_beast
@@ -2802,12 +1419,8 @@ Phased Demon in play.
 					health = 4,
                     isGuard = false,
 					cost = 6,
+					
 					xmlText=[[<vlayout>
-    <hlayout flexibleheight="1">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Requires an Occultist in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
  <hlayout flexibleheight="1">
         <box flexiblewidth="1">
             <tmpro text="{expend}" fontsize="30"/>
@@ -2843,8 +1456,11 @@ choices = {
 				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -7), incrementCounterEffect("p2_ritual", -7))
 				.seq(createCardEffect(acs_incubus_carddef(), currentInPlayLoc))
 				.seq(incrementCounterEffect("incubus", 3)),
-				condition = getCounter("p1_ritual").gte(7).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_coven_priestess")).count().gte(1)),
-				
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(7),
 				layout = createLayout({
 					name = "Summon Incubus",
 					art = "art/epicart/guilt_demon",
@@ -2852,6 +1468,7 @@ choices = {
 					health = 4,
                     isGuard = false,
 					cost = 7,
+					
 					xmlText=[[<vlayout>
     <hlayout flexibleheight="0.5">
             <tmpro text="{expend}" fontsize="40" flexiblewidth="2"/>
@@ -2876,20 +1493,18 @@ at the start of each turn." fontsize="24" flexiblewidth="10" />
 				.seq(hitOpponentEffect(selectLoc(loc(currentPid, handPloc)).sum(getCardCost())))
 				.seq(hitSelfEffect(divide(selectLoc(loc(currentPid, handPloc)).sum(getCardCost()), 2)))
 				.seq(addEffect(endTurnEffect())),
-
-				condition = getCounter("p1_ritual").gte(7).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
-				
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(7),
 				layout = createLayout({
 					name = "Crazed Chaos",
 					art = "art/epicart/divine_judgment",
 					frame = "frames/necromancer_frames/necromancer_item_cardframe",
 					cost = 7,
+					
 					xmlText=[[<vlayout>
-    <hlayout flexibleheight="9">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Ritual requires a {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/> 
 <hlayout flexiblewidth="1">
 <text text="Add the cost of
 all cards in your hand.
@@ -2904,25 +1519,23 @@ End your turn immediately." fontsize="18"/>	</hlayout>	</vlayout>
 			
 -- Choice 4c: Always available - 8 cost									
 			{
-				effect = incrementCounterEffect("p1_ritual", -8)
+				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -8), incrementCounterEffect("p2_ritual", -8))
 				.seq(createCardEffect(acs_laughing_shade_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(8).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardFaction(necrosFaction)).count().gte(1)),
-				
-			condition = getCounter("p1_ritual").gte(6),
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(8),
 				layout = createLayout({
                      name = "Summon Laughing Shade",
                     art = "art/epicart/dark_prince",
                     frame = "frames/necromancer_frames/necromancer_item_cardframe",
 					cost = 8,
+					
 					health = 5,
 					isGuard = false,
                     xmlText=[[
 <vlayout>
-    <hlayout flexibleheight="0.5">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Requires {necro} in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
  <hlayout flexibleheight="1">
         <box flexiblewidth="1">
             <tmpro text="{expend}" fontsize="30"/>
@@ -2948,10 +1561,13 @@ If it is a Champion, +{health_3}." fontsize="16"/>
 
 -- Choice 4d- Require X- 8 cost
 													{
-				effect = incrementCounterEffect("p1_ritual", -8)
+				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -8), incrementCounterEffect("p2_ritual", -8))
 				.seq(createCardEffect(acs_karamight_carddef(), currentInPlayLoc)),
-				condition = getCounter("p1_ritual").gte(8).And(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_knight_of_karamight")).count().gte(1)),
-				
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(8),
 				layout = createLayout({
 					name = "Summon Karamight",
 					art = "art/epicart/raxxa_s_enforcer",
@@ -2959,13 +1575,8 @@ If it is a Champion, +{health_3}." fontsize="16"/>
 					health = 5,
                     isGuard = true,
 					cost = 8,
+			
 					xmlText=[[<vlayout>
-    <hlayout flexibleheight="0.8">
-            <tmpro text="{necro}" fontsize="24" flexiblewidth="2"/>
-            <tmpro text="Requires Knight
- of Karamight in play." fontsize="16" flexiblewidth="10" />
-    </hlayout>
-    <divider/>
  <hlayout flexibleheight="1">
         <box flexiblewidth="1">
             <tmpro text="{expend}" fontsize="30"/>
@@ -2999,6 +1610,7 @@ choices = {
 -- Choice 1: Lesser Rituals
 			{
 				effect = lesser_rituals,
+
 				layout = createLayout({
 					name = "Lesser Rituals",
 					art = "icons/the_summoning",
@@ -3025,6 +1637,7 @@ choices = {
 -- Choice 1: Lesser Rituals
 			{
 				effect = lesser_rituals,
+
 				layout = createLayout({
 					name = "Lesser Rituals",
 					art = "icons/the_summoning",
@@ -3041,6 +1654,7 @@ choices = {
 -- Choice 2: Common Rituals
 			{
 				effect = common_rituals,
+
 				layout = createLayout({
 					name = "Devout Rituals",
 					art = "icons/the_summoning",
@@ -3067,6 +1681,7 @@ choices = {
 -- Choice 1: Lesser Rituals
 			{
 				effect = lesser_rituals,
+
 				layout = createLayout({
 					name = "Lesser Rituals",
 					art = "icons/the_summoning",
@@ -3083,6 +1698,7 @@ choices = {
 -- Choice 2: Common Rituals
 			{
 				effect = common_rituals,
+
 				layout = createLayout({
 					name = "Devout Rituals",
 					art = "icons/the_summoning",
@@ -3099,6 +1715,7 @@ choices = {
 -- Choice 3: Greater Rituals									
 			{
 				effect = greater_rituals,
+
 				layout = createLayout({
 					name = "Greater Rituals",
 					art = "icons/the_summoning",
@@ -3125,6 +1742,7 @@ choices = {
 -- Choice 1: Lesser Rituals
 			{
 				effect = lesser_rituals,
+
 				layout = createLayout({
 					name = "Lesser Rituals",
 					art = "icons/the_summoning",
@@ -3141,6 +1759,7 @@ choices = {
 -- Choice 2: Common Rituals
 			{
 				effect = common_rituals,
+
 				layout = createLayout({
 					name = "Devout Rituals",
 					art = "icons/the_summoning",
@@ -3157,6 +1776,7 @@ choices = {
 -- Choice 3: Greater Rituals									
 			{
 				effect = greater_rituals,
+
 				layout = createLayout({
 					name = "Greater Rituals",
 					art = "icons/the_summoning",
@@ -3173,6 +1793,7 @@ choices = {
 -- Choice 4- Infernal Rituals
 			{
 				effect = infernal_rituals,
+
 				layout = createLayout({
 					name = "Infernal Rituals",
 					art = "icons/the_summoning",
@@ -3188,10 +1809,7 @@ choices = {
 }
 }
 )
-
-
-
-						
+			
 
 
 --Champions
@@ -3267,7 +1885,7 @@ choices = {
 			
 -- Choice 2: Perform Ritual							
 			{
-				effect = lesser_rituals,
+				effect = ef_ritual_1,
 				layout = createLayout({
 							name = "Acolyte",
 							art = "icons/the_summoning",
@@ -3389,9 +2007,6 @@ choices = {
                                     xmlText = [[
 <vlayout>
     <hlayout flexibleheight="2">
-        <box flexiblewidth="1">
-            <tmpro text="{necro}" fontsize="42"/>
-        </box>
         <vlayout flexiblewidth="7">
             <box flexibleheight="2">
                 <tmpro text="{gold_2}
@@ -3416,9 +2031,6 @@ choices = {
                                     xmlText = [[
 <vlayout>
     <hlayout flexibleheight="2">
-        <box flexiblewidth="1">
-            <tmpro text="{necro}" fontsize="42"/>
-        </box>
         <vlayout flexiblewidth="7">
             <box flexibleheight="2">
                 <tmpro text="{gold_2}
@@ -3450,7 +2062,8 @@ level 1-2 Ritual." fontsize="36" />
     <hlayout flexibleheight="1">
             <tmpro text="{expend}" fontsize="40" flexiblewidth="2"/>
             <tmpro text="{gold_2}
- &lt;size=75%&gt;1 Ritual" fontsize="40" flexiblewidth="12" />
+ &lt;size=65%&gt;and 1 Ritual or Perform a 
+level 1-2 Ritual" fontsize="40" flexiblewidth="12" />
     </hlayout>
 </vlayout>
 					]],
@@ -3479,7 +2092,61 @@ function acs_servant_of_the_shade_carddef()
                         trigger = autoTrigger,
                         cost = expendCost,
                         activations = multipleActivations,
-                        effect = gainCombatEffect(3)
+                        effect = pushChoiceEffectWithTitle(
+
+{
+					upperTitle = "",
+					lowerTitle = "",
+choices = {
+-- Choice 1: Gain Ritual
+			{
+				effect = gainCombatEffect(3),
+				layout = createLayout({
+									name = "Servant of the Shade",
+									art = "art/epicart/zealous_necromancer",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="{combat_2}" fontsize="34" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},
+			
+-- Choice 2: Perform Ritual							
+			{
+				effect = ef_ritual_3,
+				layout = createLayout({
+							name = "Servant of the Shade",
+							art = "icons/the_summoning",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="Perform a
+level 1-3 Ritual." fontsize="28" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},	
+}
+}
+),
 					}	  
                 ),
 				createAbility(
@@ -3501,9 +2168,11 @@ function acs_servant_of_the_shade_carddef()
 					cost = 5,
                     xmlText=[[
 <vlayout>
-    <hlayout flexibleheight="1">
+    <hlayout flexibleheight="2">
             <tmpro text="{expend}" fontsize="40" flexiblewidth="2"/>
-            <tmpro text="{combat_3}" fontsize="40" flexiblewidth="12" />
+            <tmpro text="{combat_3}
+&lt;size=50%&gt;or Perform
+a level 1-3 Ritual" fontsize="40" flexiblewidth="12" />
     </hlayout>
 
 <divider/>
@@ -3599,7 +2268,61 @@ function acs_coven_priestess_carddef()
                         trigger = autoTrigger,
                         cost = expendCost,
                         activations = multipleActivations,
-                        effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 4), incrementCounterEffect("p2_ritual", 4))
+						effect = pushChoiceEffectWithTitle(
+
+{
+					upperTitle = "",
+					lowerTitle = "",
+choices = {
+-- Choice 1: Gain Ritual
+			{
+				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 4), incrementCounterEffect("p2_ritual", 4)),
+				layout = createLayout({
+									name = "Coven Priestess",
+									art = "art/epicart/scarred_priestess",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="+4 Ritual" fontsize="34" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},
+			
+-- Choice 2: Perform Ritual							
+			{
+				effect = ef_ritual_4,
+				layout = createLayout({
+							name = "Coven Priestess",
+							art = "icons/the_summoning",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="Perform a
+level 1-4 Ritual." fontsize="28" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},	
+}
+}
+),
 					}	  
                 ),
 				createAbility(
@@ -3636,7 +2359,8 @@ function acs_coven_priestess_carddef()
 <tmpro text="{expend}" fontsize="34"/>
 </box>
 <box flexiblewidth="7">
-<tmpro text="Ritual 4" fontsize="24" />
+<tmpro text="+4 Ritual or
+Perform a level 1-4 Ritual" fontsize="20" />
 </box>
 </hlayout>
 <divider/>
@@ -3657,7 +2381,7 @@ function acs_coven_priestess_carddef()
 <tmpro text="{necro}" fontsize="34"/>
 </box>
 <box flexiblewidth="7">
-<tmpro text="Ritual 4" fontsize="24" />
+<tmpro text="+4 Ritual" fontsize="24" />
 </box>
 </hlayout>
 </vlayout>
@@ -3719,6 +2443,7 @@ function acs_knight_of_karamight_carddef()
                         activations = singleActivations,
 						allyFactions = {necrosFaction},
                         effect = hitSelfEffect(2).seq(gainCombatEffect(4)),
+						
 						check = getPlayerHealth(currentPid).gte(3),
 						promptType = showPrompt,
 						layout = createLayout({
@@ -3814,10 +2539,66 @@ function acs_occultist_carddef()
 				createAbility(
                     {
                         id = "occultist_main",
-                        trigger = autoTrigger,
+                        trigger = uiTrigger,
                         cost = expendCost,
                         activations = multipleActivations,
-                        effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 3), incrementCounterEffect("p2_ritual", 3))
+                        effect = pushChoiceEffectWithTitle(
+
+{
+					upperTitle = "",
+					lowerTitle = "",
+choices = {
+-- Choice 1: Gain Ritual
+			{
+				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 3), incrementCounterEffect("p2_ritual", 3)),
+				layout = createLayout({
+									name = "Occultist",
+									art = "art/epicart/endbringer_ritualist",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="{gold_2}
+&lt;size=75%&gt;1 Ritual" fontsize="36" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},
+			
+-- Choice 2: Perform Ritual							
+			{
+				effect = ef_ritual_4,
+				layout = createLayout({
+							 name = "Occultist",
+							art = "icons/the_summoning",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="{gold_2}
+&lt;size=75%&gt;Perform a
+level 1-2 Ritual." fontsize="36" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},	
+}
+}
+)
 					}	  
                 ),
 				createAbility(
@@ -3900,7 +2681,8 @@ function acs_occultist_carddef()
 <tmpro text="{expend}" fontsize="34"/>
 </box>
 <box flexiblewidth="7">
-<tmpro text="Ritual 3" fontsize="24" />
+<tmpro text="Ritual 3 or
+Perform a level 1-4 Ritual" fontsize="20" />
 </box>
 </hlayout>
 <divider/>
@@ -4018,11 +2800,16 @@ Discard 1." fontsize="30" />
                         activations = singleActivations,
 						promptType = showPrompt,
                         effect = waitForClickEffect("Dark One, take me.", "").seq(waitForClickEffect("Aaarrrrggh!", ""))
+						.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", -8), incrementCounterEffect("p2_ritual", -8)))
 				.seq(sacrificeTarget().apply(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_the_chosen"))))
 				.seq(damageTarget(4).apply(selectLoc(loc(currentPid, inPlayPloc)).union(selectLoc(loc(oppPid, inPlayPloc)))))
 				.seq(waitForClickEffect("I am... inevitable", ""))
-				.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), createCardEffect(acs_cthugnogoth_p1_carddef(), loc(currentPid, inPlayPloc)), createCardEffect(acs_cthugnogoth_p2_carddef(), loc(currentPid, inPlayPloc)))),
-				check = getCounter("p1_ritual").gte(8),
+				.seq(createCardEffect(acs_cthugnogoth_carddef(), loc(currentPid, inPlayPloc))),
+				condition = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(8),
 				cost = sacrificeSelfCost
 
 					}	  
@@ -4037,7 +2824,7 @@ Discard 1." fontsize="30" />
                     xmlText=[[
 <vlayout>
 <hlayout flexibleheight="0.5">
-<box flexiblewidth="1">
+<box flexiblewidth="0.5">
 <tmpro text="{necro}" fontsize="28"/>
 </box>
 <box flexiblewidth="7">
@@ -4045,10 +2832,10 @@ Discard 1." fontsize="30" />
 </box>
 </hlayout>
 <divider/><hlayout flexibleheight="0.5">
-<box flexiblewidth="1">
+<box flexiblewidth="0.5">
 <tmpro text="{necro}" fontsize="28"/>
 </box>
-<box flexiblewidth="0">
+<box flexiblewidth="0.5">
 <tmpro text="{necro}" fontsize="28"/>
 </box>
 <box flexiblewidth="7">
@@ -4057,15 +2844,16 @@ Discard 1." fontsize="30" />
 </hlayout>
 <divider/>
 <hlayout flexibleheight="1">
-<box flexiblewidth="1">
+<box flexiblewidth="0.5
+">
 <tmpro text="{necro}" fontsize="28"/>
 </box>
-<box flexiblewidth="0">
+<box flexiblewidth="0.5">
 <tmpro text="{necro}{necro}" fontsize="28"/>
 </box>
-<box flexiblewidth="9">
-<tmpro text="Transform this card
-permanently into
+<box flexiblewidth="7">
+<tmpro text="-8 Ritual. Deal 4 damage to all champions. Transform 
+this card permanently into
 Arch Demon Cthugnogoth." fontsize="18" />
 </box>
 </hlayout>
@@ -4079,151 +2867,7 @@ Arch Demon Cthugnogoth." fontsize="18" />
     )
 end
 
-function acs_summon_cthugnogoth_p1_carddef()
-	return createHeroAbilityDef({
-		id = "summon_cthugnogoth_p1",
-		name = "Summon Cthugnogoth",
-		types = { heroAbilityType },
-        abilities = {
-			createAbility({
-				id = "summon_cthugnogoth_Activate",
-				trigger = uiTrigger,
-				allyFactions = {necrosFaction, necrosFaction, necrosFaction, necrosFaction},
-				promptType = showPrompt,
-				layout = createLayout({
-					name = "Summon Cthugnogoth",
-					art = "art/epicart/raxxa_s_curse",
-					frame = "frames/necros_action_cardframe",
-					xmlText = [[	
-<vlayout>
-    <hlayout flexibleheight="1">
-<box flexiblewidth="1">
-<tmpro text="{necro}" fontsize="28"/>
-</box>
-<box flexiblewidth="0">
-<tmpro text="{necro}{necro}" fontsize="28"/>
-</box>
-        <box flexiblewidth="7">
-            <tmpro text="Spend 8 Ritual.
-Sacrifice The Chosen.
-Deal 4 damage to all other champions.
-Summon Cthugnogoth." fontsize="22" />
-        </box>
-    </hlayout>
-</vlayout>
-					]]					
-				}),
-				effect = incrementCounterEffect("p1_ritual", -8)
-				.seq(waitForClickEffect("Dark One, take me.", "")).seq(waitForClickEffect("Aaarrrrggh!", ""))
-				.seq(sacrificeTarget().apply(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_the_chosen"))))
-				.seq(damageTarget(4).apply(selectLoc(loc(currentPid, inPlayPloc)).union(selectLoc(loc(oppPid, inPlayPloc)))))
-				.seq(waitForClickEffect("I am... inevitable", ""))
-				.seq(createCardEffect(acs_cthugnogoth_p1_carddef(), loc(currentPid, inPlayPloc)))
-				,
-				check = getCounter("p1_ritual").gte(8),
-				cost = sacrificeSelfCost
-			})
-		},
-        layout = createLayout({
-					name = "Summon Cthugnogoth",
-					art = "art/epicart/raxxa_s_curse",
-					frame = "frames/necros_action_cardframe",
-					xmlText = [[	
-<vlayout>
-    <hlayout flexibleheight="1">
-<box flexiblewidth="1">
-<tmpro text="{necro}" fontsize="28"/>
-</box>
-<box flexiblewidth="0">
-<tmpro text="{necro}{necro}" fontsize="28"/>
-</box>
-        <box flexiblewidth="7">
-            <tmpro text="Spend 8 Ritual.
-Sacrifice The Chosen.
-Deal 4 damage to all other champions.
-Summon Cthugnogoth." fontsize="22" />
-        </box>
-    </hlayout>
-</vlayout>
-					]]					
-				}),
-        layoutPath  = "art/epicart/raxxa_s_curse",
-	})
-end	
-
-function acs_summon_cthugnogoth_p2_carddef()
-	return createHeroAbilityDef({
-		id = "summon_cthugnogoth_p2",
-		name = "Summon Cthugnogoth",
-		types = { heroAbilityType },
-        abilities = {
-			createAbility({
-				id = "summon_cthugnogoth_Activate",
-				trigger = uiTrigger,
-				allyFactions = {necrosFaction, necrosFaction, necrosFaction, necrosFaction},
-				promptType = showPrompt,
-				layout = createLayout({
-					name = "Summon Cthugnogoth",
-					art = "art/epicart/raxxa_s_curse",
-					frame = "frames/necros_action_cardframe",
-					xmlText = [[	
-<vlayout>
-    <hlayout flexibleheight="1">
-<box flexiblewidth="1">
-<tmpro text="{necro}" fontsize="28"/>
-</box>
-<box flexiblewidth="0">
-<tmpro text="{necro}{necro}" fontsize="28"/>
-</box>
-        <box flexiblewidth="7">
-            <tmpro text="Spend 8 Ritual.
-Sacrifice The Chosen.
-Deal 4 damage to all other champions.
-Summon Cthugnogoth." fontsize="22" />
-        </box>
-    </hlayout>
-</vlayout>
-					]]					
-				}),
-				effect = incrementCounterEffect("p2_ritual", -8)
-				.seq(waitForClickEffect("Dark One, take me.", "")).seq(waitForClickEffect("Aaarrrrggh!", ""))
-				.seq(sacrificeTarget().apply(selectLoc(loc(currentPid, inPlayPloc)).where(isCardName("acs_the_chosen"))))
-				.seq(damageTarget(4).apply(selectLoc(loc(currentPid, inPlayPloc)).union(selectLoc(loc(oppPid, inPlayPloc)))))
-				.seq(waitForClickEffect("I am... inevitable", ""))
-				.seq(createCardEffect(acs_cthugnogoth_p1_carddef(), loc(currentPid, inPlayPloc)))
-				,
-				check = getCounter("p2_ritual").gte(8),
-				cost = sacrificeSelfCost
-			})
-		},
-        layout = createLayout({
-					name = "Summon Cthugnogoth",
-					art = "art/epicart/raxxa_s_curse",
-					frame = "frames/necros_action_cardframe",
-					xmlText = [[	
-<vlayout>
-    <hlayout flexibleheight="1">
-<box flexiblewidth="1">
-<tmpro text="{necro}" fontsize="28"/>
-</box>
-<box flexiblewidth="0">
-<tmpro text="{necro}{necro}" fontsize="28"/>
-</box>
-        <box flexiblewidth="7">
-            <tmpro text="Spend 8 Ritual.
-Sacrifice The Chosen.
-Deal 4 damage to all other champions.
-Summon Cthugnogoth." fontsize="22" />
-        </box>
-    </hlayout>
-</vlayout>
-					]]					
-				}),
-        layoutPath  = "art/epicart/raxxa_s_curse",
-	})
-end	
-
-function acs_cthugnogoth_p1_carddef()
+function acs_cthugnogoth_carddef()
     return createChampionDef(
         {
             id = "acs_cthugnogoth",
@@ -4290,118 +2934,11 @@ function acs_cthugnogoth_p1_carddef()
 				}),
                         effect = incrementCounterEffect("p1_ritual", -2)
 						.seq(grantHealthTarget(1, { SlotExpireEnum.never }, nullEffect(), "shadow").apply(selectSource())),
-						check = getCounter("p1_ritual").gte(2),
-					}	  
-                )
-            },
-            layout = createLayout(
-                {
-                    name = "Cthugnogoth",
-                    art = "art/epicart/raxxa_s_curse",
-                    frame = "frames/necros_champion_cardframe",
-					cost = 2,
-                    xmlText=[[
-<vlayout>
-    <hlayout flexibleheight="0.5">
-            <tmpro text="{expend}" fontsize="30" flexiblewidth="2"/>
-            <tmpro text="{combat_7}" fontsize="30" flexiblewidth="12" />
-    </hlayout>
-
-<divider/>
-<hlayout flexibleheight="0.5">
-<box flexiblewidth="1">
-<tmpro text="{necro}" fontsize="28"/>
-</box>
-<box flexiblewidth="7">
-<tmpro text="Spend 2 Ritual.
-+1{shield} permanently." fontsize="17" />
-</box>   
-    </hlayout>
-<divider/>
-    <hlayout flexibleheight="1">
-            <tmpro text="When played deal 2 damage
-to all other champions.
-When this leaves play
-gain +1{shield} permanently." fontsize="17" flexiblewidth="2" />
-    </hlayout>
-</vlayout>
-					]],
-                    health = 5,
-                    isGuard = false
-                }
-            )
-        }
-    )
-end
-
-function acs_cthugnogoth_p2_carddef()
-    return createChampionDef(
-        {
-            id = "acs_cthugnogoth",
-            name = "Cthugnogoth",
-			types = {championType, noStealType},
-			factions = {necrosFaction},
-            health = 5,
-            isGuard = false,
-            abilities = {
-				createAbility(
-                    {
-                        id = "cthugnogoth_combat",
-                        trigger = autoTrigger,
-                        cost = expendCost,
-                        activations = multipleActivations,
-                        effect = gainCombatEffect(7),
-
-					}	  
-                ),
-				createAbility(
-                    {
-                        id = "cthugnogoth_onplay",
-                        trigger = onPlayTrigger,
-                        cost = noCost,
-                        activations = singleActivations,
-                        effect = damageTarget(2).apply(selectLoc(loc(currentPid, inPlayPloc)).union(selectLoc(loc(oppPid, inPlayPloc))))
-					}	  
-                ),
-				createAbility(
-                    {
-                        id = "cthugnogoth_onleave",
-                        trigger = onLeavePlayTrigger,
-                        cost = noCost,
-                        activations = singleActivations,
-                        effect = grantHealthTarget(1, { SlotExpireEnum.never }, nullEffect(), "shadow").apply(selectSource())
-						,
-					}	  
-                ),
-				createAbility(
-                    {
-                        id = "cthugnogoth_ritual",
-                        trigger = uiTrigger,
-                        cost = noCost,
-						allyFactions = {necro},
-                        activations = singleActivations,
-						promptType = showPrompt,
-				layout = createLayout({
-					name = "Summon Cthugnogoth",
-					art = "art/epicart/raxxa_s_curse",
-					frame = "frames/necros_action_cardframe",
-					xmlText = [[	
-<vlayout>
-    <hlayout flexibleheight="1">
-<box flexiblewidth="1">
-<tmpro text="{necro}" fontsize="40"/>
-</box>
-        <box flexiblewidth="7">
-            <tmpro text="Spend 2 Ritual.
-+1{shield} permanently." fontsize="24" />
-        </box>
-    </hlayout>
-</vlayout>
-					]]					
-				}),
-                        effect = incrementCounterEffect("p2_ritual", -2)
-						.seq(grantHealthTarget(1, { SlotExpireEnum.never }, nullEffect(), "shadow").apply(selectSource())),
-						check = getCounter("p2_ritual").gte(2),
+						check = ifInt(
+        selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1),
+        getCounter("p1_ritual"),
+        getCounter("p2_ritual")
+        ).gte(2),
 					}	  
                 )
             },
@@ -4461,14 +2998,14 @@ function acs_demonic_runes_carddef()
                 createAbility({
                         id = "acs_demonic_runes_main",
                         layout = cardLayout,
-                          effect = pushTargetedEffect({
+                          effect = gainGoldEffect(3).seq(pushTargetedEffect({
 												desc = "Sacrifice a card from the market.",
 												validTargets = selectLoc(centerRowLoc),
 												min = 0,
 												max = 1,
 												targetEffect = sacrificeTarget(),
-												})
-												.seq(gainGoldEffect(3)),
+												}))
+												,
 						promptType = showPrompt,
 						layout = createLayout({
 									name = "Demonic Runes",
@@ -4503,7 +3040,7 @@ function acs_demonic_runes_carddef()
 					upperTitle = "",
 					lowerTitle = "",
 choices = {
--- Choice 1: Lesser Rituals
+-- Choice 1: Draw 1
 			{
 				effect = drawCardsEffect(1),
 				layout = createLayout({
@@ -4529,9 +3066,9 @@ choices = {
 				tags = {}
 			},
 			
--- Choice 3: Greater Rituals									
+-- Choice 2:  Rituals									
 			{
-				effect = lesser_rituals,
+				effect = ef_ritual_3,
 				layout = createLayout({
 									name = "Demonic Runes",
 									art = "icons/the_summoning",
@@ -4545,7 +3082,7 @@ choices = {
         <vlayout flexiblewidth="7">
             <box flexibleheight="2">
                 <tmpro text="Perform a
-level 1 Ritual." fontsize="28" />
+level 1-3 Ritual." fontsize="28" />
             </box>
         </vlayout>
     </hlayout>
@@ -4607,7 +3144,7 @@ level 1 Ritual." fontsize="28" />
 <vlayout>
 <hlayout flexibleheight="2">
 <box flexiblewidth="7">
-<tmpro text="You may sacrifice 1 card from the market." fontsize="24" />
+<tmpro text="{gold_3} You may sacrifice 1 card from the market." fontsize="24" />
 </box>
 </hlayout>
 <divider/>
@@ -4616,7 +3153,8 @@ level 1 Ritual." fontsize="28" />
 <tmpro text="{necro}" fontsize="34"/>
 </box>
 <box flexiblewidth="7">
-<tmpro text="Draw 1" fontsize="28" />
+<tmpro text="Draw 1 or
+perform a level 1-3 Ritual" fontsize="20" />
 </box>
 </hlayout>
 <divider/>
@@ -4656,11 +3194,13 @@ function acs_infernal_speech_carddef()
                         effect = hitSelfEffect(2).seq(drawCardsEffect(1)).seq(gainCombatEffect(3)),
 						check = getPlayerHealth(currentPid).gte(3),
                         trigger = uiTrigger,
+						promptType = showPrompt,
+						layout = cardLayout,
                         tags = {}
                     }
                 )
             },
-            layout = createLayout(
+            cardLayout = createLayout(
                 {
                     name = "Infernal Speech",
 					cost = 1,
@@ -4701,14 +3241,15 @@ function acs_dark_mass_carddef()
 												validTargets = selectLoc(centerRowLoc),
 												min = 0,
 												max = 1,
-												targetEffect = sacrificeTarget(),
+												targetEffect = sacrificeTarget().seq(hitSelfEffect(2)),
 												})
-										.seq(hitSelfEffect(2)),
+										.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 4), incrementCounterEffect("p2_ritual", 4)))
+										,
 						check = getPlayerHealth(currentPid).gte(3),
 						promptType = showPrompt,
 						layout = createLayout({
-									name = "Demonic Runes",
-									art = "art/t_shadow_spell_09_blue",
+									name = "Dark Mass",
+									art = "art/epicart/ritual_of_scara",
 									frame = "frames/necros_action_cardframe",
                                     xmlText = [[
 <vlayout>
@@ -4728,25 +3269,96 @@ function acs_dark_mass_carddef()
                 ),
 				createAbility({
                         id = "acs_dark_mass_ritual",
-                        layout = cardLayout,
-                        effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 4), incrementCounterEffect("p2_ritual", 4)),
-                        trigger = autoTrigger,
+                        promptType = showPrompt,
+						layout = createLayout({
+									name = "Dark Mass",
+									art = "art/epicart/ritual_of_scara",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <box flexiblewidth="1">
+            <tmpro text="{necro}" fontsize="42"/>
+        </box>
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="+5 Ritual 
+or
+Perform a
+level 1-3 Ritual." fontsize="28" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+                       
+						trigger = uiTrigger,
+						allyFactions = {necrosFaction},
+						effect = pushChoiceEffectWithTitle({
+					upperTitle = "",
+					lowerTitle = "",
+choices = {
+-- Choice 1: Gain ritual
+			{
+				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 5), incrementCounterEffect("p2_ritual", 5)),
+				layout = createLayout({
+									name = "Dark Mass",
+									art = "art/epicart/ritual_of_scara",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <box flexiblewidth="1">
+            <tmpro text="{necro}" fontsize="42"/>
+        </box>
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="+5 Ritual" fontsize="34" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},
+			
+-- Choice 2:  Perform Rituals									
+			{
+				effect = ef_ritual_3,
+				layout = createLayout({
+									name = "Dark Mass",
+									art = "icons/the_summoning",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <box flexiblewidth="1">
+            <tmpro text="{necro}" fontsize="42"/>
+        </box>
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="Perform a
+level 1-3 Ritual." fontsize="28" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},	
+}
+}
+),
+
                         tags = {}
                     }
                 ),
-				
-				createAbility(
-                    {
-                        id = "acs_dark_mass_ally",
-                        trigger = autoTrigger,
-                        cost = noCost,
-                        activations = singleActivations,
-						allyFactions = {necrosFaction},
-                        effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 5), incrementCounterEffect("p2_ritual", 5))
-                        				
-					}	  
-                ),
-				
+					
 				createAbility(
                     {
                         id = "acs_dark_mass_ally2",
@@ -4754,7 +3366,7 @@ function acs_dark_mass_carddef()
                         cost = noCost,
                         activations = singleActivations,
 						allyFactions = {necrosFaction, necrosFaction},
-                        effect = prepareTarget().apply(selectLoc(currentSkillsLoc).where(isCardName("setup_p1_ritual_buff").Or(isCardName("acs_ritual_summoning_p2")))),
+                        effect = ef_ritual_4,
 						promptType = showPrompt,
 						layout = createLayout({
 									name = "Dark Mass",
@@ -4770,8 +3382,8 @@ function acs_dark_mass_carddef()
 <tmpro text="{necro}" fontsize="40"/>
 </box>
 <box flexiblewidth="12">
-<tmpro text="Prepare your
-Ritual skill" fontsize="28" />
+<tmpro text="Perform a
+level 1-4 Ritual" fontsize="28" />
 </box>
 </hlayout>
 </vlayout>
@@ -4790,7 +3402,7 @@ Ritual skill" fontsize="28" />
                     frame = "frames/necros_action_cardframe",
                     xmlText=[[
 <vlayout>
-<hlayout flexibleheight="2">
+<hlayout flexibleheight="1.5">
 <box flexiblewidth="7">
 <tmpro text="Ritual 4.
 You may -{health_2} to sacrifice 1 card from the market." fontsize="20" />
@@ -4802,19 +3414,21 @@ You may -{health_2} to sacrifice 1 card from the market." fontsize="20" />
 <tmpro text="{necro}" fontsize="30"/>
 </box>
 <box flexiblewidth="7">
-<tmpro text="Ritual 5" fontsize="20" />
+<tmpro text="Ritual 5 or
+perform a level 1-3 Ritual" fontsize="20" />
 </box>
 </hlayout>
 <divider/>
 <hlayout flexibleheight="1">
-<box flexiblewidth="1">
+<box flexiblewidth="0.5">
 <tmpro text="{necro}" fontsize="30"/>
 </box>
 <box flexiblewidth="0">
 <tmpro text="{necro}" fontsize="30"/>
 </box>
 <box flexiblewidth="10">
-<tmpro text="Prepare your Ritual skill" fontsize="20" />
+<tmpro text="Perform a
+level 1-4 Rituall" fontsize="20" />
 </box>
 </hlayout>
 </vlayout>
@@ -4852,7 +3466,67 @@ function acs_blood_ritual_carddef()
                         cost = noCost,
                         activations = singleActivations,
 						allyFactions = {necrosFaction},
-                        effect = drawCardsEffect(1),
+                        effect = pushChoiceEffectWithTitle(
+
+{
+					upperTitle = "",
+					lowerTitle = "",
+choices = {
+-- Choice 1: Draw 1
+			{
+				effect = drawCardsEffect(1),
+				layout = createLayout({
+									name = "Blood Ritual",
+									art = "art/epicart/corpsemonger",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <box flexiblewidth="1">
+            <tmpro text="{necro}" fontsize="42"/>
+        </box>
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="Draw 1" fontsize="34" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},
+			
+-- Choice 2:  Rituals									
+			{
+				effect = ef_ritual_2,
+				layout = createLayout({
+									name = "Blood Ritual",
+									art = "icons/the_summoning",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <box flexiblewidth="1">
+            <tmpro text="{necro}" fontsize="42"/>
+        </box>
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="Perform a
+level 1-2 Ritual." fontsize="28" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},	
+}
+}
+),
 						promptType = showPrompt,
 						layout = createLayout({
 									name = "Blood Ritual",
@@ -4865,7 +3539,9 @@ function acs_blood_ritual_carddef()
 <tmpro text="{necro}" fontsize="40"/>
 </box>
 <box flexiblewidth="12">
-<tmpro text="Draw 1" fontsize="34" />
+<tmpro text="Draw 1
+or perform
+a level 1-2 Ritual" fontsize="30" />
 </box>
 </hlayout>
 </vlayout>
@@ -4918,22 +3594,23 @@ function acs_blood_ritual_carddef()
                     frame = "frames/necros_action_cardframe",
                     xmlText=[[
 <vlayout>
-<hlayout flexibleheight="1.5">
+<hlayout flexibleheight="1.2">
 <box flexiblewidth="7">
 <tmpro text="{combat_4}" fontsize="34" />
 </box>
 </hlayout>
 <divider/>
-<hlayout flexibleheight="1">
+<hlayout flexibleheight="1.2">
 <box flexiblewidth="1">
 <tmpro text="{necro}" fontsize="34"/>
 </box>
 <box flexiblewidth="7">
-<tmpro text="Draw 1" fontsize="24" />
+<tmpro text="Draw 1 or
+perform a level 1-2 Ritual." fontsize="20" />
 </box>
 </hlayout>
 <divider/>
-<hlayout flexibleheight="1.5">
+<hlayout flexibleheight="1.2">
 <box flexiblewidth="1">
 <tmpro text="{scrap}" fontsize="34"/>
 </box>
@@ -4963,7 +3640,69 @@ function acs_rite_of_the_coven_carddef()
                 createAbility({
                         id = "acs_rite_of_the_coven_main",
                         layout = cardLayout,
-                         effect = drawCardsEffect(1).seq(gainCombatEffect(1)),
+                        effect = pushChoiceEffectWithTitle(
+
+{
+					upperTitle = "",
+					lowerTitle = "",
+choices = {
+-- Choice 1: Draw 1
+			{
+				effect = drawCardsEffect(1).seq(gainCombatEffect(1)),
+				layout = createLayout({
+									name = "Rite of the Coven",
+									art = "art/epicart/scarred_cultist",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <box flexiblewidth="1">
+            <tmpro text="{necro}" fontsize="42"/>
+        </box>
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="{combat_1}
+&lt;size=75%&gt;Draw 1" fontsize="40" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},
+			
+-- Choice 2:  Rituals									
+			{
+				effect = gainCombatEffect(1).seq(ef_ritual_1),
+				layout = createLayout({
+									name = "Rite of the Coven",
+									art = "icons/the_summoning",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <box flexiblewidth="1">
+            <tmpro text="{necro}" fontsize="42"/>
+        </box>
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="{combat_1}
+&lt;size=75%&gt;Perform a
+level 1 Ritual." fontsize="40" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},	
+}
+}
+),
                         trigger = autoTrigger,
                         tags = {}
                     }
@@ -5015,12 +3754,13 @@ function acs_rite_of_the_coven_carddef()
 <vlayout>
 <hlayout flexibleheight="1.5">
 <box flexiblewidth="7">
-<tmpro text="{combat_1}
-&lt;size=70%&gt;Draw 1" fontsize="40" />
+<tmpro text="{combat_1} &lt;size=70%&gt;Draw 1 or
+&lt;size=100%&gt;{combat_1}&lt;size=70%&gt; and perform
+a level 1 Ritual" fontsize="30" />
 </box>
 </hlayout>
 <divider/>
-<hlayout flexibleheight="1.5">
+<hlayout flexibleheight="1">
 <box flexiblewidth="1">
 <tmpro text="{scrap}" fontsize="34"/>
 </box>
@@ -5158,13 +3898,74 @@ function acs_ceremonial_altar_carddef()
                 createAbility({
                         id = "acs_ceremonial_altar_main",
                         layout = cardLayout,
-                        effect = drawCardsEffect(1)
-							.seq(ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 3), incrementCounterEffect("p2_ritual", 3))),
-                         trigger = autoTrigger,
+                        effect = drawCardsEffect(1),
+                        trigger = autoTrigger,
                         tags = {}
                     }
                 ),
+				
+				createAbility(
+                    {
+                        id = "acs_ceremonial_altar_choice",
+                        trigger = uiTrigger,
+                        activations = singleActivations,
+                        effect = pushChoiceEffectWithTitle(
 
+{
+					upperTitle = "",
+					lowerTitle = "",
+choices = {
+-- Choice 1: Gain Ritual
+			{
+				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 3), incrementCounterEffect("p2_ritual", 3)),
+				layout = createLayout({
+									name = "Ceremonial Altar",
+									art = "art/epicart/forbidden_research",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text=";+3 Ritual" fontsize="24" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},
+			
+-- Choice 2: Perform Ritual							
+			{
+				effect = ef_ritual_1,
+				layout = createLayout({
+							name = "Ceremonial Altar",
+							art = "icons/the_summoning",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="Perform a
+level 1 Ritual." fontsize="24" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},	
+}
+}
+)
+					}	  
+                ),
 
             },
             layout = createLayout(
@@ -5177,8 +3978,11 @@ function acs_ceremonial_altar_carddef()
 <vlayout>
 <hlayout flexibleheight="1.5">
 <box flexiblewidth="7">
-<tmpro text="Ritual 3
-Draw 1" fontsize="36" />
+<tmpro text="Draw 1
+then choose:
+
++3 Ritual or
+Perform a level 1 Ritual" fontsize="24" />
 </box>
 </hlayout>
 </vlayout>
@@ -5203,8 +4007,64 @@ function acs_summoning_circle_carddef()
                 createAbility({
                         id = "acs_summoning_circle_main",
                         layout = cardLayout,
-                        effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 4), incrementCounterEffect("p2_ritual", 4)),
-                        trigger = autoTrigger,
+                        trigger = uiTrigger,
+						effect = pushChoiceEffectWithTitle(
+
+{
+					upperTitle = "",
+					lowerTitle = "",
+choices = {
+-- Choice 1: Gain Ritual
+			{
+				effect = ifElseEffect(selectLoc(loc(currentPid, buffsPloc)).where(isCardName("setup_p1_ritual_buff")).count().eq(1), incrementCounterEffect("p1_ritual", 4), incrementCounterEffect("p2_ritual", 4)),
+				layout = createLayout({
+									name = "Summoning Circle",
+									art = "art/epicart/ancient_chant",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="{gold_2}
+&lt;size=75%&gt;4 Ritual" fontsize="36" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},
+			
+-- Choice 2: Perform Ritual							
+			{
+				effect = ef_ritual_2,
+				layout = createLayout({
+							name = "Summoning Circle",
+							art = "icons/the_summoning",
+									frame = "frames/necros_action_cardframe",
+                                    xmlText = [[
+<vlayout>
+    <hlayout flexibleheight="2">
+        <vlayout flexiblewidth="7">
+            <box flexibleheight="2">
+                <tmpro text="{gold_2}
+&lt;size=75%&gt;Perform a
+level 1-2 Ritual." fontsize="36" />
+            </box>
+        </vlayout>
+    </hlayout>
+</vlayout>
+                                    ]],
+                                }),
+				
+				tags = {}
+			},	
+}
+}
+),
                         tags = {}
                     }
                 ),
@@ -5240,7 +4100,8 @@ function acs_summoning_circle_carddef()
 <vlayout>
 <hlayout flexibleheight="2">
 <box flexiblewidth="7">
-<tmpro text="Ritual 4." fontsize="20" />
+<tmpro text="Ritual 4.
+Or perform a level 1-2 Ritual." fontsize="20" />
 </box>
 </hlayout>
 <divider/>
@@ -5287,10 +4148,9 @@ acs_coven_priestess_carddef(),
 acs_knight_of_karamight_carddef(),
 acs_occultist_carddef(),
 acs_the_chosen_carddef(),
-acs_cthugnogoth_p1_carddef(),
-acs_cthugnogoth_p2_carddef(),
-acs_summon_cthugnogoth_p1_carddef(),
-acs_summon_cthugnogoth_p2_carddef(),
+acs_cthugnogoth_carddef(),
+
+
 --actions
 acs_demonic_runes_carddef(),
 acs_infernal_speech_carddef(),
@@ -5314,7 +4174,7 @@ acs_stranger_thing_carddef()
     standardSetup(
         g,
         {
-            description = "Alt Necros deck. Created by Aarkenell 25/02/2026.",
+            description = "Alt Necros deck. With thanks to Jspeh & Azgalor. Created by Aarkenell 25/02/2026.",
             playerOrder = {plid1, plid2},
             ai = ai.CreateKillSwitchAi(createAggressiveAI(), createHardAi2()),
             timeoutAi = createTimeoutAi(),
@@ -5339,7 +4199,6 @@ acs_stranger_thing_carddef()
                             fatigueCount(40, 1, "FatigueP1"),
 							p1_ritual_buff,
 							startOfGameBuffDef(),
-							playerTrackingBuffDef()
                         }
                     }
                 },
@@ -5373,7 +4232,7 @@ end
 
 
 function setupMeta(meta)
-    meta.name = "tester base (don't edit)"
+    meta.name = ""
     meta.minLevel = 0
     meta.maxLevel = 0
     meta.introbackground = ""
